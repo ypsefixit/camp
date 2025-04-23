@@ -1,7 +1,7 @@
 from flask import Flask, request, render_template, jsonify
 import pandas as pd
 
-app = Flask(__name__)
+app = Flask(__name__, static_folder='static')
 
 df_disponibile = pd.DataFrame()
 df_dimensione = pd.DataFrame()

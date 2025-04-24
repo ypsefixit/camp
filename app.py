@@ -1,11 +1,14 @@
-from flask import Flask, request, render_template, jsonify
+
 import pandas as pd
-from datetime import datetime
+from flask import Flask, request, render_template, send_file
+from werkzeug.utils import secure_filename
+import os
 
-app = Flask(__name__, static_folder='static')
+app = Flask(__name__)
+UPLOAD_FOLDER = 'uploads'
+os.makedirs(UPLOAD_FOLDER, exist_ok=True)
+app.config['UPLOAD_FOLDER'] = UPLOAD_FOLDER
 
-df_disponibile = pd.DataFrame()
-df_dimensione = pd.DataFrame()
 merged_data = pd.DataFrame()
 
 @app.route('/')
@@ -14,46 +17,61 @@ def index():
 
 @app.route('/upload_disponibile', methods=['POST'])
 def upload_disponibile():
-    global df_disponibile, merged_data
-    try:
-        file = request.files['file']
-        df = pd.read_excel(file)
-        df['risorsa'] = df['risorsa'].astype(str).str.strip().str.upper()
-        df['disponibile'] = pd.to_datetime(df['disponibile'], dayfirst=True, errors='coerce')
-        df_disponibile = df
-
-        merged = pd.merge(df_dimensione, df_disponibile, on='risorsa', how='left')
-        merged['disponibile'] = merged['disponibile'].fillna(pd.to_datetime(datetime.now().strftime("%d/%m/%y"), dayfirst=True))
-        merged_data = merged
-
-        return 'File "disponibile" caricato correttamente!'
-    except Exception as e:
-        return f'Errore: {str(e)}'
+    global merged_data
+    file = request.files['file']
+    filename = secure_filename(file.filename)
+    filepath = os.path.join(app.config['UPLOAD_FOLDER'], filename)
+    file.save(filepath)
+    df = pd.read_excel(filepath)
+    df.columns = df.columns.str.lower()
+    df['disponibile'] = pd.to_datetime(df['disponibile'], dayfirst=True)
+    if merged_data.empty:
+        merged_data = df
+    else:
+        merged_data = pd.merge(merged_data, df, on='risorsa')
+    return 'File caricato con successo'
 
 @app.route('/upload_dimensione', methods=['POST'])
 def upload_dimensione():
-    global df_dimensione, merged_data
-    try:
-        file = request.files['file']
-        df = pd.read_excel(file)
-        df['risorsa'] = df['risorsa'].astype(str).str.strip().str.upper()
-        df_dimensione = df
-
-        merged = pd.merge(df_dimensione, df_disponibile, on='risorsa', how='left')
-        merged['disponibile'] = merged['disponibile'].fillna(pd.to_datetime(datetime.now().strftime("%d/%m/%y"), dayfirst=True))
-        merged_data = merged
-
-        return 'File "dimensione" caricato correttamente!'
-    except Exception as e:
-        return f'Errore: {str(e)}'
-
-@app.route('/get_data', methods=['GET'])
-def get_data():
     global merged_data
-    data_to_return = merged_data.copy()
-    data_to_return['disponibile'] = data_to_return['disponibile'].dt.strftime('%d/%m/%Y')
-    sorted_data = data_to_return.sort_values(by=['disponibile', 'dimensione', 'risorsa'])
-    return jsonify(sorted_data.to_dict(orient='records'))
+    file = request.files['file']
+    filename = secure_filename(file.filename)
+    filepath = os.path.join(app.config['UPLOAD_FOLDER'], filename)
+    file.save(filepath)
+    df = pd.read_excel(filepath)
+    df.columns = df.columns.str.lower()
+    df['dimensione'] = df['dimensione'].astype(str).str.replace(',', '.').astype(float)
+    if merged_data.empty:
+        merged_data = df
+    else:
+        merged_data = pd.merge(merged_data, df, on='risorsa')
+    return 'File caricato con successo'
 
-if __name__ == '__main__':
-    app.run(debug=True)
+@app.route('/search', methods=['POST'])
+def search():
+    global merged_data
+    data_filter = request.form.get('data')
+    dimensione_filter = request.form.get('dimensione')
+
+    print(f"Numero totale righe in merged_data: {len(merged_data)}")
+    results = merged_data.copy()
+
+    if data_filter:
+        try:
+            data_dt = pd.to_datetime(data_filter, dayfirst=True)
+            print(f"Filtro per data: {data_dt.strftime('%d/%m/%y')}")
+            results = results[results['disponibile'] >= data_dt]
+        except Exception as e:
+            print(f"Errore nel parsing della data: {e}")
+
+    if dimensione_filter:
+        try:
+            dim = float(dimensione_filter.replace(',', '.'))
+            print(f"Filtro per dimensione >= {dim}")
+            results = results[results['dimensione'] >= dim]
+        except Exception as e:
+            print(f"Errore nella conversione della dimensione: {e}")
+
+    results = results.sort_values(by=['risorsa', 'disponibile', 'dimensione'], ascending=[True, True, True])
+    print(f"Numero risultati dopo filtri: {len(results)}")
+    return results.to_json(orient='records')

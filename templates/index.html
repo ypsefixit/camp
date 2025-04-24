@@ -71,30 +71,5 @@
         alert(await response.text());
     };
 </script>
-
-<script>
-async function search() {
-    const data = document.getElementById("data").value;
-    const dimensione = document.getElementById("dimensione").value;
-
-    const params = new URLSearchParams({ data, dimensione });
-    const response = await fetch(`/search?${params.toString()}`);
-    const results = await response.json();
-
-    const container = document.getElementById("results");
-    container.innerHTML = "";
-    if (results.length === 0) {
-        container.innerHTML = "<div class='text-danger'>Nessun risultato trovato.</div>";
-    } else {
-        results.forEach(r => {
-            container.innerHTML += `<div class="card p-2 mb-2">
-                <strong>${r.risorsa}</strong><br>
-                Disponibile: ${r.disponibile}<br>
-                Dimensione: ${r.dimensione}
-            </div>`;
-        });
-    }
-}
-</script>
 </body>
 </html>

@@ -56,11 +56,13 @@ def search():
     try:
         data = request.args.get('data')
         dimensione = request.args.get('dimensione')
+                print(f'Numero totale righe in merged_data: {len(merged_data)}')
         results = merged_data.copy()
 
         if data:
             try:
                 data_dt = datetime.strptime(data, "%d/%m/%y")
+                                print(f'Filtro per data: {data_dt.strftime("%d/%m/%y")}')
                 results = results[results['disponibile'] >= data_dt]
             except Exception as e:
                 print(f"Errore parsing data: {e}")
@@ -69,12 +71,15 @@ def search():
         if dimensione:
             try:
                 dim = float(dimensione.replace(',', '.'))
+                                print(f'Filtro per dimensione >= {dim}')
                 results = results[results['dimensione'] >= dim]
             except Exception as e:
                 print(f"Errore parsing dimensione: {e}")
                 return jsonify([])
 
                 results = results.sort_values(by=['risorsa', 'disponibile', 'dimensione'], ascending=[True, True, True])
+                print(f'Numero risultati dopo filtri: {len(results)}')
+        results = results.sort_values(by=['risorsa', 'disponibile', 'dimensione'], ascending=[True, True, True])
         return results.to_json(orient='records')
     except Exception as e:
         print(f"Errore nella ricerca: {e}")
@@ -82,3 +87,31 @@ def search():
 
 if __name__ == '__main__':
     app.run(host='0.0.0.0', port=5000)
+
+
+@app.route('/export', methods=['POST'])
+def export():
+    global merged_data
+    data_filter = request.form.get('data')
+    dimensione_filter = request.form.get('dimensione')
+
+    results = merged_data.copy()
+    if data_filter:
+        try:
+            data_dt = pd.to_datetime(data_filter, dayfirst=True)
+            results = results[results['disponibile'] >= data_dt]
+        except Exception as e:
+            print(f"Errore nel parsing della data: {e}")
+
+    if dimensione_filter:
+        try:
+            dim = float(dimensione_filter.replace(',', '.'))
+            results['dimensione'] = results['dimensione'].astype(str).str.replace(',', '.').astype(float)
+            results = results[results['dimensione'] >= dim]
+        except Exception as e:
+            print(f"Errore nella conversione della dimensione: {e}")
+
+    results = results.sort_values(by=['risorsa', 'disponibile', 'dimensione'], ascending=[True, True, True])
+    output_path = "static/risultati_filtrati.xlsx"
+    results.to_excel(output_path, index=False)
+    return send_file(output_path, as_attachment=True)

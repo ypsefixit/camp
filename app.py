@@ -69,7 +69,7 @@ def search():
         if dimensione:
             try:
                 dim = float(dimensione.replace(',', '.'))
-                results = results[results['dimensione'] == dim]
+                results = results[results['dimensione'] >= dim]
             except Exception as e:
                 print(f"Errore parsing dimensione: {e}")
                 return jsonify([])

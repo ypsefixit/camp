@@ -54,9 +54,15 @@ def search():
 
     results = merged_data.copy()
 
-    if data:
-        results = results[results['disponibile'].dt.strftime('%d/%m/%y') == data]
 
+    if data:
+        try:
+            data_dt = datetime.strptime(data, "%d/%m/%y")
+            results = results[results['disponibile'] >= data_dt]
+        except:
+            return jsonify([])
+    
+    
     if dimensione:
         try:
             dim = float(dimensione.replace(',', '.'))

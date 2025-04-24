@@ -1,4 +1,3 @@
-
 from flask import Flask, request, render_template, jsonify
 import pandas as pd
 from datetime import datetime
@@ -25,52 +24,60 @@ def upload_disponibile():
 
         merged = pd.merge(df_dimensione, df_disponibile, on='risorsa', how='left')
         merged['disponibile'] = merged['disponibile'].fillna(pd.to_datetime(datetime.now().strftime("%d/%m/%y"), dayfirst=True))
-        merged_data[:] = merged
+        merged_data = merged
 
         return 'File "disponibile" caricato con successo.'
+    except Exception as e:
+        print(f"Errore: {e}")
+        return 'Errore durante il caricamento del file disponibile.'
 
 @app.route('/upload_dimensione', methods=['POST'])
 def upload_dimensione():
     global df_dimensione, merged_data
+    try:
+        file = request.files['file']
+        df = pd.read_excel(file)
+        df['risorsa'] = df['risorsa'].astype(str).str.strip().str.upper()
+        df['dimensione'] = df['dimensione'].astype(str).str.replace(',', '.').astype(float)
+        df_dimensione = df
 
-    file = request.files['file']
-    df = pd.read_excel(file)
-    df['risorsa'] = df['risorsa'].astype(str).str.strip().str.upper()
-    df['dimensione'] = df['dimensione'].astype(str).str.replace(',', '.').astype(float)
-    df_dimensione = df
+        merged = pd.merge(df_dimensione, df_disponibile, on='risorsa', how='left')
+        merged['disponibile'] = merged['disponibile'].fillna(pd.to_datetime(datetime.now().strftime("%d/%m/%y"), dayfirst=True))
+        merged_data = merged
 
-    merged = pd.merge(df_dimensione, df_disponibile, on='risorsa', how='left')
-    merged['disponibile'] = merged['disponibile'].fillna(pd.to_datetime(datetime.now().strftime("%d/%m/%y"), dayfirst=True))
-    merged_data[:] = merged
-
-    return 'File "disponibile" caricato con successo.'
+        return 'File "dimensione" caricato con successo.'
+    except Exception as e:
+        print(f"Errore: {e}")
+        return 'Errore durante il caricamento del file dimensione.'
 
 @app.route('/search', methods=['GET'])
 def search():
     global merged_data
+    try:
+        data = request.args.get('data')
+        dimensione = request.args.get('dimensione')
+        results = merged_data.copy()
 
-    data = request.args.get('data')
-    dimensione = request.args.get('dimensione')
+        if data:
+            try:
+                data_dt = datetime.strptime(data, "%d/%m/%y")
+                results = results[results['disponibile'] >= data_dt]
+            except Exception as e:
+                print(f"Errore parsing data: {e}")
+                return jsonify([])
 
-    results = merged_data.copy()
+        if dimensione:
+            try:
+                dim = float(dimensione.replace(',', '.'))
+                results = results[results['dimensione'] == dim]
+            except Exception as e:
+                print(f"Errore parsing dimensione: {e}")
+                return jsonify([])
 
-
-    if data:
-        try:
-            data_dt = datetime.strptime(data, "%d/%m/%y")
-            results = results[results['disponibile'] >= data_dt]
-        except:
-            return jsonify([])
-    
-    
-    if dimensione:
-        try:
-            dim = float(dimensione.replace(',', '.'))
-            results = results[results['dimensione'] == dim]
-        except:
-            return jsonify([])
-
-    return results.to_json(orient='records')
+        return results.to_json(orient='records')
+    except Exception as e:
+        print(f"Errore nella ricerca: {e}")
+        return jsonify([])
 
 if __name__ == '__main__':
     app.run(host='0.0.0.0', port=5000)

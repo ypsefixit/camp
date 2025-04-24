@@ -26,10 +26,9 @@ def upload_disponibile():
         merged['disponibile'] = merged['disponibile'].fillna(pd.to_datetime(datetime.now().strftime("%d/%m/%y"), dayfirst=True))
         merged_data = merged
 
-        return 'File "disponibile" caricato con successo.'
+        return 'File "disponibile" caricato correttamente!'
     except Exception as e:
-        print(f"Errore: {e}")
-        return 'Errore durante il caricamento del file disponibile.'
+        return f'Errore: {str(e)}'
 
 @app.route('/upload_dimensione', methods=['POST'])
 def upload_dimensione():
@@ -38,47 +37,23 @@ def upload_dimensione():
         file = request.files['file']
         df = pd.read_excel(file)
         df['risorsa'] = df['risorsa'].astype(str).str.strip().str.upper()
-        df['dimensione'] = df['dimensione'].astype(str).str.replace(',', '.').astype(float)
         df_dimensione = df
 
         merged = pd.merge(df_dimensione, df_disponibile, on='risorsa', how='left')
         merged['disponibile'] = merged['disponibile'].fillna(pd.to_datetime(datetime.now().strftime("%d/%m/%y"), dayfirst=True))
         merged_data = merged
 
-        return 'File "dimensione" caricato con successo.'
+        return 'File "dimensione" caricato correttamente!'
     except Exception as e:
-        print(f"Errore: {e}")
-        return 'Errore durante il caricamento del file dimensione.'
+        return f'Errore: {str(e)}'
 
-@app.route('/search', methods=['GET'])
-def search():
+@app.route('/get_data', methods=['GET'])
+def get_data():
     global merged_data
-    try:
-        data = request.args.get('data')
-        dimensione = request.args.get('dimensione')
-        results = merged_data.copy()
-
-        if data:
-            try:
-                data_dt = datetime.strptime(data, "%d/%m/%y")
-                results = results[results['disponibile'] >= data_dt]
-            except Exception as e:
-                print(f"Errore parsing data: {e}")
-                return jsonify([])
-
-        if dimensione:
-            try:
-                dim = float(dimensione.replace(',', '.'))
-                results = results[results['dimensione'] >= dim]
-            except Exception as e:
-                print(f"Errore parsing dimensione: {e}")
-                return jsonify([])
-
-        results = results.sort_values(by=['risorsa', 'disponibile', 'dimensione'], ascending=[True, True, True])
-        return results.to_json(orient='records')
-    except Exception as e:
-        print(f"Errore nella ricerca: {e}")
-        return jsonify([])
+    data_to_return = merged_data.copy()
+    data_to_return['disponibile'] = data_to_return['disponibile'].dt.strftime('%d/%m/%Y')
+    sorted_data = data_to_return.sort_values(by=['disponibile', 'dimensione', 'risorsa'])
+    return jsonify(sorted_data.to_dict(orient='records'))
 
 if __name__ == '__main__':
-    app.run(host='0.0.0.0', port=5000)
+    app.run(debug=True)

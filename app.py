@@ -74,6 +74,7 @@ def search():
                 print(f"Errore parsing dimensione: {e}")
                 return jsonify([])
 
+                results = results.sort_values(by=['risorsa', 'disponibile', 'dimensione'], ascending=[True, True, True])
         return results.to_json(orient='records')
     except Exception as e:
         print(f"Errore nella ricerca: {e}")

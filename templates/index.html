@@ -43,40 +43,32 @@
         <button type="submit" class="btn btn-secondary">Aggiorna Dimensione</button>
     </form>
 
-    <script>
-        document.getElementById('form-disponibile').onsubmit = async function(e) {
-            e.preventDefault();
-            const formData = new FormData();
-            formData.append("file", document.getElementById("disponibile-file").files[0]);
-            const response = await fetch('/upload_disponibile', { method: 'POST', body: formData });
-            alert(await response.text());
-        };
-
-        document.getElementById('form-dimensione').onsubmit = async function(e) {
-            e.preventDefault();
-            const formData = new FormData();
-            formData.append("file", document.getElementById("dimensione-file").files[0]);
-            const response = await fetch('/upload_dimensione', { method: 'POST', body: formData });
-            alert(await response.text());
-        };
-
-        async function search() {
-            const data = document.getElementById('data').value;
-            const dimensione = document.getElementById('dimensione').value;
-            const res = await fetch(`/search?data=${data}&dimensione=${dimensione}`);
-            const items = await res.json();
-
-            let html = '<ul class="list-group">';
-            for (let item of items) {
-                html += `<li class="list-group-item">
-                            <strong>Risorsa:</strong> ${item.risorsa}<br>
-                            <strong>Disponibile:</strong> ${item.disponibile}<br>
-                            <strong>Dimensione:</strong> ${item.dimensione}
-                         </li>`;
-            }
-            html += '</ul>';
-            document.getElementById('results').innerHTML = html;
+<script>
+    document.getElementById('form-disponibile').onsubmit = async function(e) {
+        e.preventDefault();
+        const fileInput = document.getElementById("disponibile-file");
+        if (!fileInput.files.length) {
+            alert("Seleziona un file Excel prima di caricare.");
+            return;
         }
-    </script>
+        const formData = new FormData();
+        formData.append("file", fileInput.files[0]);
+        const response = await fetch('/upload_disponibile', { method: 'POST', body: formData });
+        alert(await response.text());
+    };
+
+    document.getElementById('form-dimensione').onsubmit = async function(e) {
+        e.preventDefault();
+        const fileInput = document.getElementById("dimensione-file");
+        if (!fileInput.files.length) {
+            alert("Seleziona un file Excel prima di caricare.");
+            return;
+        }
+        const formData = new FormData();
+        formData.append("file", fileInput.files[0]);
+        const response = await fetch('/upload_dimensione', { method: 'POST', body: formData });
+        alert(await response.text());
+    };
+</script>
 </body>
 </html>

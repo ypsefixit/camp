@@ -1,3 +1,4 @@
+
 <!DOCTYPE html>
 <html>
 <head>
@@ -12,21 +13,7 @@
         <img src="/static/logo.jpeg" alt="Logo" style="max-width: 150px;">
     </div>
 
-    <h2 class="mb-4">Aggiorna singolarmente i file Excel</h2>
-
-    <form id="form-disponibile" class="mb-3">
-        <label class="form-label">File Disponibile:</label>
-        <input type="file" id="disponibile-file" class="form-control mb-2">
-        <button type="submit" class="btn btn-primary">Aggiorna Disponibile</button>
-    </form>
-
-    <form id="form-dimensione" class="mb-5">
-        <label class="form-label">File Dimensione:</label>
-        <input type="file" id="dimensione-file" class="form-control mb-2">
-        <button type="submit" class="btn btn-secondary">Aggiorna Dimensione</button>
-    </form>
-
-    <h2 class="mb-4">Filtra Risorse</h2>
+    <h2 class="mb-3">Filtra Risorse</h2>
     <div class="row g-3 mb-4">
         <div class="col-6">
             <label class="form-label">Data (gg/mm/aa):</label>
@@ -37,10 +24,24 @@
             <input type="text" id="dimensione" class="form-control">
         </div>
     </div>
-    <button onclick="search()" class="btn btn-success mb-4">Cerca</button>
+    <button onclick="search()" class="btn btn-success mb-5">Cerca</button>
 
     <h3>Risultati</h3>
-    <div id="results" class="mt-3"></div>
+    <div id="results" class="mb-5"></div>
+
+    <h2 class="mb-3">Aggiorna i file Excel</h2>
+
+    <form id="form-disponibile" class="mb-4">
+        <label class="form-label">File Disponibile:</label>
+        <input type="file" id="disponibile-file" class="form-control mb-2">
+        <button type="submit" class="btn btn-primary">Aggiorna Disponibile</button>
+    </form>
+
+    <form id="form-dimensione" class="mb-5">
+        <label class="form-label">File Dimensione:</label>
+        <input type="file" id="dimensione-file" class="form-control mb-2">
+        <button type="submit" class="btn btn-secondary">Aggiorna Dimensione</button>
+    </form>
 
     <script>
         document.getElementById('form-disponibile').onsubmit = async function(e) {

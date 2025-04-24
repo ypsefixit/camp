@@ -1,5 +1,7 @@
+
 from flask import Flask, request, render_template, jsonify
 import pandas as pd
+from datetime import datetime
 
 app = Flask(__name__, static_folder='static')
 
@@ -18,9 +20,13 @@ def upload_disponibile():
     file = request.files['file']
     df = pd.read_excel(file)
     df['risorsa'] = df['risorsa'].astype(str).str.strip().str.upper()
+    df['disponibile'] = pd.to_datetime(df['disponibile'], dayfirst=True, errors='coerce')
     df_disponibile = df
 
-    merged_data = pd.merge(df_disponibile, df_dimensione, on='risorsa', how='inner')
+    merged = pd.merge(df_dimensione, df_disponibile, on='risorsa', how='left')
+    merged['disponibile'] = merged['disponibile'].fillna(pd.to_datetime(datetime.now().strftime("%d/%m/%y"), dayfirst=True))
+    merged_data[:] = merged
+
     return 'File "disponibile" caricato con successo.'
 
 @app.route('/upload_dimensione', methods=['POST'])
@@ -33,7 +39,10 @@ def upload_dimensione():
     df['dimensione'] = df['dimensione'].astype(str).str.replace(',', '.').astype(float)
     df_dimensione = df
 
-    merged_data = pd.merge(df_disponibile, df_dimensione, on='risorsa', how='inner')
+    merged = pd.merge(df_dimensione, df_disponibile, on='risorsa', how='left')
+    merged['disponibile'] = merged['disponibile'].fillna(pd.to_datetime(datetime.now().strftime("%d/%m/%y"), dayfirst=True))
+    merged_data[:] = merged
+
     return 'File "dimensione" caricato con successo.'
 
 @app.route('/search', methods=['GET'])

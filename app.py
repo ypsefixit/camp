@@ -28,8 +28,6 @@ def upload_disponibile():
         merged_data[:] = merged
 
         return 'File "disponibile" caricato con successo.'
-    except Exception as e:
-        return jsonify({'error': str(e)}), 500
 
 @app.route('/upload_dimensione', methods=['POST'])
 def upload_dimensione():
@@ -46,8 +44,6 @@ def upload_dimensione():
     merged_data[:] = merged
 
     return 'File "disponibile" caricato con successo.'
-    except Exception as e:
-        return jsonify({'error': str(e)}), 500
 
 @app.route('/search', methods=['GET'])
 def search():

@@ -1,96 +1,155 @@
 <!DOCTYPE html>
 <html lang="it">
 <head>
-    <meta charset="UTF-8">
-    <title>Campeggio Santa Margherita</title>
-    <meta name="viewport" content="width=device-width, initial-scale=1">
-    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
+  <meta charset="UTF-8">
+  <title>Ricerca Risorse</title>
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      margin: 40px;
+    }
+    header {
+      display: flex;
+      align-items: center;
+      gap: 20px;
+      margin-bottom: 20px;
+    }
+    header img {
+      height: 60px;
+    }
+    h1 {
+      font-size: 1.5em;
+      margin: 0;
+    }
+    h2 {
+      margin-top: 40px;
+    }
+    input[type="text"], input[type="file"], select, input[type="date"] {
+      padding: 8px;
+      margin: 5px 0;
+      width: 100%;
+    }
+    button {
+      padding: 10px;
+      margin-top: 10px;
+      width: 100%;
+    }
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      margin-top: 20px;
+    }
+    table, th, td {
+      border: 1px solid #ddd;
+    }
+    th, td {
+      padding: 10px;
+      text-align: left;
+    }
+  </style>
 </head>
-<body class="container py-5">
+<body>
+  <header>
+    <img src="/static/logo.jpeg" alt="Logo Campeggio">
+    <h1>Campeggio Santa Margherita</h1>
+  </header>
 
-    <div class="text-center mb-4">
-        <img src="/static/logo.jpeg" alt="Logo" class="logo" style="max-width: 120px;">
-        <div class="mt-2 fw-bold fs-4 text-uppercase">Campeggio Santa Margherita</div>
-    </div>
+  <h2>Filtri di Ricerca</h2>
+  <label>Minima Dimensione:</label>
+  <select id="dimensione">
+    <option value="">-- Seleziona dimensione --</option>
+    <option value="5">5</option>
+    <option value="5.5">5.5</option>
+    <option value="6">6</option>
+    <option value="6.5">6.5</option>
+    <option value="7">7</option>
+    <option value="7.5">7.5</option>
+    <option value="8">8</option>
+    <option value="8.5">8.5</option>
+    <option value="9">9</option>
+  </select>
 
-    <div class="card p-4 mb-4">
-        <h5>📂 Carica file "disponibile.xlsx"</h5>
-        <form id="form-disponibile" enctype="multipart/form-data">
-            <input class="form-control mb-2" type="file" name="file" accept=".xlsx" required>
-            <button type="submit" class="btn btn-primary">Carica Disponibile</button>
-        </form>
-    </div>
+  <label>Disponibile fino a (gg/mm/aa):</label>
+  <input type="date" id="disponibile" value="">
+  <button onclick="cerca()">Cerca</button>
 
-    <div class="card p-4 mb-4">
-        <h5>📄 Aggiorna file "dimensione.xlsx"</h5>
-        <form id="form-dimensione" enctype="multipart/form-data">
-            <input class="form-control mb-2" type="file" name="file" accept=".xlsx" required>
-            <button type="submit" class="btn btn-warning">Aggiorna Dimensione</button>
-        </form>
-    </div>
+  <h2>Carica File Disponibile</h2>
+  <input type="file" id="uploadDisponibile">
+  <button onclick="uploadFile('uploadDisponibile', '/upload_disponibile')">Carica Disponibilità</button>
 
-    <div class="card p-4 mb-4">
-        <h5>🔍 Ricerca disponibilità</h5>
-        <button id="btn-cerca" class="btn btn-success">Cerca</button>
-    </div>
+  <h2>Aggiorna File Dimensione</h2>
+  <input type="file" id="uploadDimensione">
+  <button onclick="uploadFile('uploadDimensione', '/upload_dimensione')">Aggiorna Dimensione</button>
 
-    <div id="message" class="mt-3"></div>
+  <table id="tabellaRisultati">
+    <thead>
+      <tr>
+        <th>Risorsa</th>
+        <th>Dimensione</th>
+        <th>Disponibilità</th>
+      </tr>
+    </thead>
+    <tbody></tbody>
+  </table>
 
-    <div id="risultati" class="mt-4"></div>
+  <script>
+    document.addEventListener("DOMContentLoaded", () => {
+      const oggi = new Date().toISOString().split('T')[0];
+      document.getElementById('disponibile').value = oggi;
+    });
 
-    <script>
-        async function uploadFile(formId, endpoint) {
-            const form = document.getElementById(formId);
-            form.addEventListener('submit', async (e) => {
-                e.preventDefault();
-                const formData = new FormData(form);
-                const response = await fetch(endpoint, {
-                    method: 'POST',
-                    body: formData
-                });
-                const result = await response.json();
-                const messageDiv = document.getElementById('message');
-                messageDiv.innerHTML = `<div class="alert ${result.success ? 'alert-success' : 'alert-danger'}">${result.message}</div>`;
-            });
-        }
+    function formatDataInput(data) {
+      const parts = data.split("-");
+      return `${parts[2]}/${parts[1]}/${parts[0].slice(2)}`;
+    }
 
-        function formatDate(input) {
-            const date = new Date(input);
-            if (isNaN(date)) return input;
-            const day = String(date.getDate()).padStart(2, '0');
-            const month = String(date.getMonth() + 1).padStart(2, '0');
-            const year = String(date.getFullYear()).slice(-2);
-            return `${day}/${month}/${year}`;
-        }
+    function cerca() {
+      const dimensione = parseFloat(document.getElementById('dimensione').value);
+      const disponibileRaw = document.getElementById('disponibile').value;
+      const disponibileFiltro = disponibileRaw ? new Date(disponibileRaw) : null;
 
-        async function cercaDisponibilita() {
-            const response = await fetch('/cerca', {
-                method: 'POST'
-            });
-            const dati = await response.json();
-            const risultatiDiv = document.getElementById('risultati');
+      fetch(`/search?dimensione=${dimensione}&disponibile=${formatDataInput(disponibileRaw)}`)
+        .then(res => res.json())
+        .then(data => {
+          if (!data.success) return alert(data.message);
 
-            if (dati.length === 0) {
-                risultatiDiv.innerHTML = '<div class="alert alert-warning">Nessun dato disponibile o file mancanti.</div>';
-                return;
+          const tbody = document.querySelector('#tabellaRisultati tbody');
+          tbody.innerHTML = '';
+          data.results.forEach(r => {
+            const dataDisponibile = r.disponibile;
+            const dataRisorsa = dataDisponibile.split("/");
+            const dataObj = new Date(`20${dataRisorsa[2]}-${dataRisorsa[1]}-${dataRisorsa[0]}`);
+            const dim = parseFloat(r.dimensione);
+
+            if (
+              (!dimensione || dim >= dimensione) &&
+              (!disponibileFiltro || dataObj >= disponibileFiltro)
+            ) {
+              const risorsa = r.risorsa.padStart(4, '0');
+              const dimensioneFormat = parseFloat(r.dimensione).toFixed(2);
+              const riga = `<tr><td>${risorsa}</td><td>${dimensioneFormat}</td><td>${dataDisponibile}</td></tr>`;
+              tbody.innerHTML += riga;
             }
+          });
+        });
+    }
 
-            let html = '<table class="table table-striped"><thead><tr><th>Risorsa</th><th>Disponibile</th><th>Dimensione</th></tr></thead><tbody>';
-            dati.forEach(riga => {
-                const risorsa = riga.risorsa.toString().padStart(4, '0').slice(-4); // 4 caratteri
-                const disponibile = formatDate(riga.disponibile);
-                const dimensione = parseFloat(riga.dimensione).toFixed(2);
-                html += `<tr><td>${risorsa}</td><td>${disponibile}</td><td>${dimensione}</td></tr>`;
-            });
-            html += '</tbody></table>';
+    function uploadFile(inputId, endpoint) {
+      const fileInput = document.getElementById(inputId);
+      const file = fileInput.files[0];
+      if (!file) return alert("Seleziona un file prima di caricare.");
 
-            risultatiDiv.innerHTML = html;
-        }
+      const formData = new FormData();
+      formData.append("file", file);
 
-        uploadFile('form-disponibile', '/upload_disponibile');
-        uploadFile('form-dimensione', '/upload_dimensione');
-        document.getElementById('btn-cerca').addEventListener('click', cercaDisponibilita);
-    </script>
-
+      fetch(endpoint, {
+        method: "POST",
+        body: formData
+      })
+      .then(res => res.json())
+      .then(data => alert(data.message))
+      .catch(() => alert("Errore durante l'upload."));
+    }
+  </script>
 </body>
 </html>

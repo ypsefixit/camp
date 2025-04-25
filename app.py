@@ -1,88 +1,66 @@
 
-from flask import Flask, request, jsonify, send_from_directory
-from flask_cors import CORS
+from flask import Flask, request, jsonify, render_template
 import pandas as pd
-import os
 from datetime import datetime
+import os
 
 app = Flask(__name__)
-CORS(app)
-
-UPLOAD_FOLDER = 'uploads'
+UPLOAD_FOLDER = "uploads"
 os.makedirs(UPLOAD_FOLDER, exist_ok=True)
 
-disponibile_path = os.path.join(UPLOAD_FOLDER, 'disponibile.xlsx')
-dimensione_path = os.path.join(UPLOAD_FOLDER, 'dimensione.xlsx')
+dimensione_data = {}
+disponibile_data = {}
 
-# Carica disponibile all'avvio se esiste
-df_disponibile = None
-if os.path.exists(disponibile_path):
-    try:
-        df_disponibile = pd.read_excel(disponibile_path, dtype=str)
-    except Exception:
-        df_disponibile = None
+def carica_dimensione(path):
+    df = pd.read_excel(path)
+    return {str(row['risorsa']).zfill(4): float(row['dimensione']) for _, row in df.iterrows()}
 
-@app.route('/')
+def carica_disponibile(path):
+    df = pd.read_excel(path)
+    return {
+        str(row['risorsa']).zfill(4): datetime.strptime(str(row['disponibile']), "%d/%m/%y").strftime("%d/%m/%y")
+        if not pd.isna(row['disponibile']) else datetime.now().strftime("%d/%m/%y")
+        for _, row in df.iterrows()
+    }
+
+@app.route("/")
 def index():
-    return send_from_directory('.', 'index.html')
+    return render_template("index.html")
 
-@app.route('/upload_disponibile', methods=['POST'])
-def upload_disponibile():
-    global df_disponibile
-    file = request.files.get('file')
-    if not file:
-        return jsonify(success=False, message="File non ricevuto.")
-    try:
-        file.save(disponibile_path)
-        df_disponibile = pd.read_excel(disponibile_path, dtype=str)
-        return jsonify(success=True, message="File 'disponibile.xlsx' caricato correttamente.")
-    except Exception as e:
-        return jsonify(success=False, message=f"Errore nel caricamento: {str(e)}")
-
-@app.route('/upload_dimensione', methods=['POST'])
+@app.route("/upload_dimensione", methods=["POST"])
 def upload_dimensione():
-    file = request.files.get('file')
-    if not file:
-        return jsonify(success=False, message="File non ricevuto.")
-    try:
-        file.save(dimensione_path)
-        return jsonify(success=True, message="File 'dimensione.xlsx' aggiornato correttamente.")
-    except Exception as e:
-        return jsonify(success=False, message=f"Errore nel caricamento: {str(e)}")
+    f = request.files["file"]
+    path = os.path.join(UPLOAD_FOLDER, "dimensione.xlsx")
+    f.save(path)
+    global dimensione_data
+    dimensione_data = carica_dimensione(path)
+    return jsonify({"success": True, "message": "File dimensione caricato."})
 
-@app.route('/cerca', methods=['POST'])
-def cerca():
-    if not os.path.exists(dimensione_path) or df_disponibile is None:
-        return jsonify([])
+@app.route("/upload_disponibile", methods=["POST"])
+def upload_disponibile():
+    f = request.files["file"]
+    path = os.path.join(UPLOAD_FOLDER, "disponibile.xlsx")
+    f.save(path)
+    global disponibile_data
+    disponibile_data = carica_disponibile(path)
+    return jsonify({"success": True, "message": "File disponibile caricato."})
 
-    try:
-        df_dimensione = pd.read_excel(dimensione_path, dtype=str)
+@app.route("/search")
+def search():
+    min_d = request.args.get("dimensione", type=float)
+    disponibile_filtro = request.args.get("disponibile")
 
-        # Merge su Risorsa
-        merged = pd.merge(df_disponibile, df_dimensione, on='Risorsa', how='inner')
-
-        # Pulizia e formato
-        merged['Risorsa'] = merged['Risorsa'].astype(str).str.zfill(4).str[:4]
-        merged['Disponibile'] = pd.to_datetime(merged['Disponibile'], errors='coerce')
-        merged['Dimensione'] = pd.to_numeric(merged['Dimensione'], errors='coerce')
-
-        merged.dropna(subset=['Disponibile', 'Dimensione'], inplace=True)
-
-        merged.sort_values(by=['Disponibile', 'Dimensione', 'Risorsa'], inplace=True)
-
-        risultati = [
-            {
-                'risorsa': row['Risorsa'],
-                'disponibile': row['Disponibile'].strftime('%d/%m/%y'),
-                'dimensione': f"{row['Dimensione']:.2f}"
-            }
-            for _, row in merged.iterrows()
-        ]
-
-        return jsonify(risultati)
-
-    except Exception as e:
-        return jsonify([])
-
-if __name__ == '__main__':
-    app.run(debug=True)
+    results = []
+    for risorsa, dim in dimensione_data.items():
+        disp = disponibile_data.get(risorsa, datetime.now().strftime("%d/%m/%y"))
+        if (not min_d or dim >= min_d):
+            disp_date = datetime.strptime(disp, "%d/%m/%y")
+            filtro_date = datetime.strptime(disponibile_filtro, "%d/%m/%y")
+            if disp_date >= filtro_date:
+                results.append({
+                    "risorsa": risorsa,
+                    "dimensione": f"{dim:.2f}",
+                    "disponibile": disp
+                })
+    results.sort(key=lambda x: (x["disponibile"], float(x["dimensione"]), x["risorsa"]))
+    return jsonify({"success": True, "results": results})

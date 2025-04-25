@@ -1,88 +1,57 @@
-
-from flask import Flask, request, jsonify, send_from_directory
-from flask_cors import CORS
+from flask import Flask, request, jsonify, render_template
 import pandas as pd
 import os
-from datetime import datetime
 
 app = Flask(__name__)
-CORS(app)
-
 UPLOAD_FOLDER = 'uploads'
-os.makedirs(UPLOAD_FOLDER, exist_ok=True)
+app.config['UPLOAD_FOLDER'] = UPLOAD_FOLDER
 
-disponibile_path = os.path.join(UPLOAD_FOLDER, 'disponibile.xlsx')
-dimensione_path = os.path.join(UPLOAD_FOLDER, 'dimensione.xlsx')
+dimensione_df = None
 
-# Carica disponibile all'avvio se esiste
-df_disponibile = None
-if os.path.exists(disponibile_path):
+@app.before_first_request
+def load_dimensione():
+    global dimensione_df
     try:
-        df_disponibile = pd.read_excel(disponibile_path, dtype=str)
+        dimensione_df = pd.read_excel(os.path.join(app.config['UPLOAD_FOLDER'], 'dimensione.xlsx'))
     except Exception:
-        df_disponibile = None
+        dimensione_df = pd.DataFrame()
 
 @app.route('/')
 def index():
-    return send_from_directory('.', 'index.html')
+    return render_template('index.html')
 
 @app.route('/upload_disponibile', methods=['POST'])
 def upload_disponibile():
-    global df_disponibile
     file = request.files.get('file')
-    if not file:
-        return jsonify(success=False, message="File non ricevuto.")
-    try:
-        file.save(disponibile_path)
-        df_disponibile = pd.read_excel(disponibile_path, dtype=str)
-        return jsonify(success=True, message="File 'disponibile.xlsx' caricato correttamente.")
-    except Exception as e:
-        return jsonify(success=False, message=f"Errore nel caricamento: {str(e)}")
+    if file:
+        path = os.path.join(app.config['UPLOAD_FOLDER'], 'disponibile.xlsx')
+        file.save(path)
+        return jsonify({'success': True, 'message': 'File disponibile caricato con successo'})
+    return jsonify({'success': False, 'message': 'Errore nel caricamento'})
 
 @app.route('/upload_dimensione', methods=['POST'])
 def upload_dimensione():
+    global dimensione_df
     file = request.files.get('file')
-    if not file:
-        return jsonify(success=False, message="File non ricevuto.")
-    try:
-        file.save(dimensione_path)
-        return jsonify(success=True, message="File 'dimensione.xlsx' aggiornato correttamente.")
-    except Exception as e:
-        return jsonify(success=False, message=f"Errore nel caricamento: {str(e)}")
+    if file:
+        path = os.path.join(app.config['UPLOAD_FOLDER'], 'dimensione.xlsx')
+        file.save(path)
+        try:
+            dimensione_df = pd.read_excel(path)
+            return jsonify({'success': True, 'message': 'File dimensione aggiornato con successo'})
+        except Exception:
+            return jsonify({'success': False, 'message': 'Errore nella lettura del file dimensione'})
+    return jsonify({'success': False, 'message': 'Nessun file caricato'})
 
 @app.route('/cerca', methods=['POST'])
 def cerca():
-    if not os.path.exists(dimensione_path) or df_disponibile is None:
-        return jsonify([])
-
     try:
-        df_dimensione = pd.read_excel(dimensione_path, dtype=str)
-
-        # Merge su Risorsa
-        merged = pd.merge(df_disponibile, df_dimensione, on='Risorsa', how='inner')
-
-        # Pulizia e formato
-        merged['Risorsa'] = merged['Risorsa'].astype(str).str.zfill(4).str[:4]
-        merged['Disponibile'] = pd.to_datetime(merged['Disponibile'], errors='coerce')
-        merged['Dimensione'] = pd.to_numeric(merged['Dimensione'], errors='coerce')
-
-        merged.dropna(subset=['Disponibile', 'Dimensione'], inplace=True)
-
-        merged.sort_values(by=['Disponibile', 'Dimensione', 'Risorsa'], inplace=True)
-
-        risultati = [
-            {
-                'risorsa': row['Risorsa'],
-                'disponibile': row['Disponibile'].strftime('%d/%m/%y'),
-                'dimensione': f"{row['Dimensione']:.2f}"
-            }
-            for _, row in merged.iterrows()
-        ]
-
-        return jsonify(risultati)
-
-    except Exception as e:
+        disponibile = pd.read_excel(os.path.join(app.config['UPLOAD_FOLDER'], 'disponibile.xlsx'))
+        if dimensione_df is None or dimensione_df.empty:
+            return jsonify([])
+        merged = disponibile.merge(dimensione_df, on='risorsa', how='left')
+        merged = merged.sort_values(by=['disponibile', 'dimensione', 'risorsa'])
+        results = merged.to_dict(orient='records')
+        return jsonify(results)
+    except Exception:
         return jsonify([])
-
-if __name__ == '__main__':
-    app.run(debug=True)

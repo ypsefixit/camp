@@ -35,7 +35,6 @@
     </div>
 
     <div id="message" class="mt-3"></div>
-
     <div id="risultati" class="mt-4"></div>
 
     <script>
@@ -77,13 +76,12 @@
 
             let html = '<table class="table table-striped"><thead><tr><th>Risorsa</th><th>Disponibile</th><th>Dimensione</th></tr></thead><tbody>';
             dati.forEach(riga => {
-                const risorsa = riga.risorsa.toString().padStart(4, '0').slice(-4); // 4 caratteri
+                const risorsa = riga.risorsa.toString().padStart(4, '0').slice(-4);
                 const disponibile = formatDate(riga.disponibile);
                 const dimensione = parseFloat(riga.dimensione).toFixed(2);
                 html += `<tr><td>${risorsa}</td><td>${disponibile}</td><td>${dimensione}</td></tr>`;
             });
             html += '</tbody></table>';
-
             risultatiDiv.innerHTML = html;
         }
 

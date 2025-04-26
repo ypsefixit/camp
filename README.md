@@ -1,34 +1,25 @@
-# Campeggio Santa Margherita
+# 🏕 Camp Main
 
-Questa è una web app React per la gestione della disponibilità delle risorse.
+Webapp per gestione disponibilità campeggio.
 
-## 🧩 Funzionalità principali
-- Ricerca per data e lunghezza in metri
-- Caricamento file `disponibilità.xlsx`
-- Aggiornamento completo tramite file `risorse.xlsx`
-- Risultati ordinati per disponibilità, dimensione e nome
+## 🚀 Deploy su Render
 
-## 🚀 Deploy su Render (Static Site)
+1. Carica questo progetto su GitHub.
+2. Crea nuovo Web Service su Render collegato a GitHub.
+3. Imposta:
+   - **Build command**: `npm install && npm run build`
+   - **Start command**: `npm run preview`
+   - **Publish directory**: *(lascia vuoto)*
 
-1. **Installazione locale:**
-   ```bash
-   npm install
-   ```
+## 🛠️ Tecnologie
 
-2. **Build dell'app:**
-   ```bash
-   npm run build
-   ```
+- React
+- Vite
+- TailwindCSS
 
-3. **Deploy su Render:**
-   - Tipo: **Static Site**
-   - Cartella pubblicata: `dist/`
-   - Build Command: `npm install && npm run build`
-   - No Start Command (statico)
+## 📂 Note
 
-## 🛠️ Configurazione Vite
-È incluso `vite.config.js` con `base: './'` per garantire corretto funzionamento delle rotte in ambienti come Render.
+- Carica file Excel nel formato corretto (vedi interfaccia).
+- Il file `risorse.xlsx` deve stare nella cartella `/public`.
 
 ---
-
-ℹ️ Assicurati che il file `risorse.xlsx` si trovi in `public/` con tre colonne: `risorsa`, `dimensione`, `disponibile`.

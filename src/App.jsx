@@ -4,10 +4,29 @@ import toast, { Toaster } from 'react-hot-toast';
 
 function App() {
   const [dimensioni, setDimensioni] = useState([]);
+
+const parseDate = (str) => {
+    const [day, month, year] = str.split('/');
+    return new Date(`20${year}`, month - 1, day);
+  };
   const [disponibilita, setDisponibilita] = useState([]);
   const [dataFiltro, setDataFiltro] = useState(new Date().toISOString().split('T')[0]);
   const [dimensioneFiltro, setDimensioneFiltro] = useState("5");
   const [risultati, setRisultati] = useState([]);
+
+const formatToday = () => {
+  const today = new Date();
+  const day = String(today.getDate()).padStart(2, '0');
+  const month = String(today.getMonth() + 1).padStart(2, '0');
+  const year = String(today.getFullYear()).slice(-2);
+  return `${day}/${month}/${year}`;
+};
+
+const parseDDMMYY = str => {
+  const [day, month, year] = str.split('/');
+  const fullYear = parseInt(year.length === 2 ? '20' + year : year, 10);
+  return new Date(fullYear, parseInt(month) - 1, parseInt(day));
+};
 
   useEffect(() => {
     fetch('/dimensione.xlsx')
@@ -60,11 +79,11 @@ function App() {
       .filter(row =>
         parseFloat(row.dimensione) >= parseFloat(dimensioneFiltro) &&
         row.disponibile &&
-        new Date(row.disponibile.split('/').reverse().join('-')) >= new Date(dataFiltro)
+        parseDDMMYY(row.disponibile) >= new Date(dataFiltro)
       )
       .sort((a, b) => {
-        const da = new Date(a.disponibile.split('/').reverse().join('-'));
-        const db = new Date(b.disponibile.split('/').reverse().join('-'));
+        const da = parseDDMMYY(a.disponibile);
+        const db = parseDDMMYY(b.disponibile);
         return da - db || a.dimensione - b.dimensione || a.risorsa.localeCompare(b.risorsa);
       });
 
@@ -78,8 +97,10 @@ function App() {
       <h1 className="text-center text-2xl font-bold">CAMPEGGIO SANTA MARGHERITA</h1>
 
       <div className="space-y-2 border-t pt-4">
-        <input type="date" value={dataFiltro} onChange={e => setDataFiltro(e.target.value)} className="w-full p-2 border rounded" />
-        <select value={dimensioneFiltro} onChange={e => setDimensioneFiltro(e.target.value)} className="w-full p-2 border rounded">
+        <label className="block font-semibold">DISPONIBILE FINO AL:</label>
+<input type="date" value={dataFiltro} onChange={e => setDataFiltro(e.target.value)} className="w-full p-2 border rounded" />
+        <label className="block font-semibold mt-2">LUNGHEZZA IN METRI</label>
+<select value={dimensioneFiltro} onChange={e => setDimensioneFiltro(e.target.value)} className="w-full p-2 border rounded">
           {[...Array(9)].map((_, i) => {
             const val = (5 + i * 0.5).toFixed(1);
             return <option key={val} value={val}>{val}</option>;
@@ -87,6 +108,18 @@ function App() {
         </select>
         <button onClick={handleSearch} className="w-full p-2 bg-blue-600 text-white rounded">Cerca</button>
       </div>
+
+<div className="space-y-4 border-t pt-4 mt-4">
+  <div>
+    <label className="block font-semibold mb-1">Carica file DISPONIBILITÀ (risorsa + disponibile):</label>
+    <input type="file" accept=".xlsx, .xls" onChange={handleFileUpload} className="border p-2 w-full" />
+  </div>
+  <div>
+    <label className="block font-semibold mb-1">Carica file COMPLETO (risorsa + dimensione + disponibile):</label>
+    <input type="file" accept=".xlsx, .xls" onChange={handleFullReplace} className="border p-2 w-full" />
+  </div>
+</div>
+
 
       <div className="space-y-2">
         {risultati.length > 0 && (

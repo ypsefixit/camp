@@ -1,35 +1,34 @@
 # Campeggio Santa Margherita
 
-Webapp responsive per la gestione di risorse con caricamento e filtro da file Excel.
+Questa è una web app React per la gestione della disponibilità delle risorse.
 
-## 🚀 Funzionalità
-- Caricamento iniziale automatico del file `dimensione.xlsx`
-- Form per caricare nuovi file Excel (dimensioni e disponibilità)
-- Filtro per data e dimensione minima
-- Visualizzazione risultati ordinati
-- Mobile responsive
-- Deployabile facilmente su Render.com
+## 🧩 Funzionalità principali
+- Ricerca per data e lunghezza in metri
+- Caricamento file `disponibilità.xlsx`
+- Aggiornamento completo tramite file `risorse.xlsx`
+- Risultati ordinati per disponibilità, dimensione e nome
 
-## 📦 Requisiti
-- Node.js >= 16
-- npm
+## 🚀 Deploy su Render (Static Site)
 
-## ▶️ Avvio in locale
-```bash
-npm install
-npm run dev
-```
+1. **Installazione locale:**
+   ```bash
+   npm install
+   ```
 
-## 🚀 Deploy su Render.com
-1. Carica questo progetto su GitHub
-2. Su [Render](https://render.com), crea un nuovo servizio **Static Site**
-3. Imposta:
-   - Build command: `npm run build`
-   - Publish directory: `dist`
-4. Fai deploy!
+2. **Build dell'app:**
+   ```bash
+   npm run build
+   ```
 
-## 📁 File Excel
-- `dimensione.xlsx` va inserito in `public/` (sarà caricato all'avvio)
-- I file caricati tramite form aggiorneranno i dati temporaneamente (solo frontend)
+3. **Deploy su Render:**
+   - Tipo: **Static Site**
+   - Cartella pubblicata: `dist/`
+   - Build Command: `npm install && npm run build`
+   - No Start Command (statico)
 
-Enjoy!
+## 🛠️ Configurazione Vite
+È incluso `vite.config.js` con `base: './'` per garantire corretto funzionamento delle rotte in ambienti come Render.
+
+---
+
+ℹ️ Assicurati che il file `risorse.xlsx` si trovi in `public/` con tre colonne: `risorsa`, `dimensione`, `disponibile`.
